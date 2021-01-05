@@ -6,7 +6,7 @@ public class PlayerController : MonoBehaviour
 {
     private Rigidbody2D rb;
 
-    private enum PlayerState
+    private enum State
     {
         Idle,
         Moving,
@@ -15,7 +15,7 @@ public class PlayerController : MonoBehaviour
         Dashing,
         Dead
     }
-    private PlayerState CurPlayerState;
+    private State curState;
 
     private bool isDead = false;
     public int health = 100;
@@ -23,6 +23,7 @@ public class PlayerController : MonoBehaviour
 
     private bool canMove = true;
     private bool facingRight = true;
+    private Vector2 moveDir = Vector2.zero;
     [SerializeField] private float speed = 4.0f;
     [SerializeField] private float jumpForce = 5.0f;
     [SerializeField] private float fallMult = 2.5f;
@@ -47,33 +48,32 @@ public class PlayerController : MonoBehaviour
         groundLayer = LayerMask.GetMask("Ground");
         enemyLayer = LayerMask.GetMask("Enemy");
 
-        CurPlayerState = PlayerState.Idle;
+        curState = State.Idle;
     }
 
     void Update()
     {
         if (!isDead)
         {
-            switch (CurPlayerState)
+            switch (curState)
             {
-                case PlayerState.Idle:
+                case State.Idle:
                     Idle();
                     break;
-                case PlayerState.Moving:
+                case State.Moving:
                     Movement();
                     break;
-                case PlayerState.Jumping:
+                case State.Jumping:
                     Jump();
                     break;
-                case PlayerState.Attacking:
+                case State.Attacking:
                     Attack();
                     break;
-                case PlayerState.Dashing:
+                case State.Dashing:
                     Dash();
                     break;
-                case PlayerState.Dead:
+                case State.Dead:
                     break;
-                default: break;
             }
         }
     }
@@ -83,42 +83,45 @@ public class PlayerController : MonoBehaviour
         PlayerPhysics();
     }
 
+    private Vector2 CurrentDirection()
+    {
+        if (facingRight)
+            moveDir = Vector2.right;
+        else
+            moveDir = Vector2.left;
+        return moveDir;
+    }
+
     private void Idle()
     {
         if (canMove)
         {
-            if (Input.GetAxisRaw("Horizontal") == 0)
+            if (Input.GetAxisRaw("Horizontal") != 0)
+            {
+                curState = State.Moving;
+            }
+            else if (Input.GetAxisRaw("Horizontal") == 0)
             {
                 // Change sprite anim to idle
             }
-            else if (Input.GetAxisRaw("Horizontal") != 0)
-            {
-                CurPlayerState = PlayerState.Moving;
-            }
             if (Input.GetKeyDown(KeyCode.Space) && isGrounded)
             {
-                CurPlayerState = PlayerState.Jumping;
+                curState = State.Jumping;
             }
         }
     }
 
     private void Movement()
     {
-        Vector2 moveDir = Vector2.zero;
-
         if (Input.GetAxisRaw("Horizontal") > 0)
         {
-            moveDir = Vector2.right;
-
             if (!facingRight)
             {
                 FlipSprite();
             }
         }
-        else if (Input.GetAxisRaw("Horizontal") < 0)
+        if (Input.GetAxisRaw("Horizontal") < 0)
         {
-            moveDir = Vector2.left;
-
             if (facingRight)
             {
                 FlipSprite();
@@ -127,7 +130,7 @@ public class PlayerController : MonoBehaviour
         }
 
         RaycastHit2D wallCheck = Physics2D.Raycast(groundCheck.position, 
-            moveDir, 0.54f, groundLayer);
+            CurrentDirection(), 0.54f, groundLayer);
 
         // Horizontal movement
         if (canMove)
@@ -144,11 +147,11 @@ public class PlayerController : MonoBehaviour
         // Change states
         if (Input.GetKeyDown(KeyCode.Space) && isGrounded)
         {
-            CurPlayerState = PlayerState.Jumping;
+            curState = State.Jumping;
         }
         else if (Input.GetAxisRaw("Horizontal") == 0 && isGrounded)
         {
-            CurPlayerState = PlayerState.Idle;
+            curState = State.Idle;
         }
     }
 
@@ -164,7 +167,7 @@ public class PlayerController : MonoBehaviour
     private void Jump()
     {
         rb.velocity = new Vector2(rb.velocity.x, jumpForce);
-        CurPlayerState = PlayerState.Idle;
+        curState = State.Idle;
     }
 
     private void PlayerPhysics()

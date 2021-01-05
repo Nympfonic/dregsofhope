@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.U2D;
 
 public class PlayerCamera : MonoBehaviour
 {
@@ -15,7 +16,7 @@ public class PlayerCamera : MonoBehaviour
 
     private void Start()
     {
-        player = GameObject.FindWithTag("Player").transform;
+        player = GameObject.Find("Player").transform;
 
         xMin = mapBounds.bounds.min.x;
         xMax = mapBounds.bounds.max.x;
@@ -24,13 +25,13 @@ public class PlayerCamera : MonoBehaviour
 
         cam = GetComponent<Camera>();
         camOrthsize = cam.orthographicSize;
-        camRatio = (xMax + camOrthsize) / 2.0f;
+        camRatio = cam.aspect * camOrthsize;
     }
 
-    private void FixedUpdate()
+    private void LateUpdate()
     {
         camY = Mathf.Clamp(player.position.y, yMin + camOrthsize, yMax - camOrthsize);
         camX = Mathf.Clamp(player.position.x, xMin + camRatio, xMax - camRatio);
-        this.transform.position = new Vector3(camX, camY, this.transform.position.z);
+        transform.position = new Vector3(camX, camY, transform.position.z);
     }
 }

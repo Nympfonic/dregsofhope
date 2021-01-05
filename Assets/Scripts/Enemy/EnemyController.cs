@@ -6,14 +6,18 @@ public abstract class EnemyController : MonoBehaviour
 {
     protected bool isDead = false;
     public int health = 100;
+    [SerializeField]
     protected bool facingRight = true;
 
     protected Transform target;
-    protected float sightRadius = 5.0f;
+    [SerializeField]
+    protected float sightDist = 4.0f;
+    protected int playerMask;
 
     protected virtual void Start()
     {
         target = GameObject.FindWithTag("Player").transform;
+        playerMask = LayerMask.GetMask("Player");
     }
 
     public virtual Vector2 CurrentDirection()
@@ -24,6 +28,15 @@ public abstract class EnemyController : MonoBehaviour
         else
             dir = Vector2.left;
         return dir;
+    }
+
+    protected void FlipSprite()
+    {
+        facingRight = !facingRight;
+
+        Vector3 scale = transform.localScale;
+        scale.x *= -1;
+        transform.localScale = scale;
     }
 
     public void TakeDamage(int damage)
