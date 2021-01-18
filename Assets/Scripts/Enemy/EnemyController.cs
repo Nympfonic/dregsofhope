@@ -4,6 +4,8 @@ using UnityEngine;
 
 public abstract class EnemyController : MonoBehaviour
 {
+    protected SpriteRenderer sr;
+    
     protected bool isDead = false;
     public int health = 100;
     [SerializeField]
@@ -14,10 +16,18 @@ public abstract class EnemyController : MonoBehaviour
     protected float sightDist = 4.0f;
     protected int playerMask;
 
+    protected bool _isHurt = false;
+    public bool isHurt
+    {
+        get { return _isHurt; }
+    }
+    protected float hurtTime = .5f;
+
     protected virtual void Start()
     {
         target = GameObject.FindWithTag("Player").transform;
         playerMask = LayerMask.GetMask("Player");
+        sr = GetComponent<SpriteRenderer>();
     }
 
     public virtual Vector2 CurrentDirection()
@@ -44,12 +54,28 @@ public abstract class EnemyController : MonoBehaviour
         if (health > 0)
         {
             health -= damage;
+            StartCoroutine(Hurt());
+
+            if (health <= 0)
+            {
+                health = 0;
+                Death();
+            }
         }
-        if (health <= 0)
-        {
-            health = 0;
-            Death();
-        }
+    }
+
+    private IEnumerator Hurt()
+    {
+        _isHurt = true;
+        Color origColor = sr.color;
+        sr.color = Color.red;
+        yield return new WaitForSeconds(hurtTime/3);
+        sr.color = origColor;
+        yield return new WaitForSeconds(hurtTime/3);
+        sr.color = Color.red;
+        yield return new WaitForSeconds(hurtTime/3);
+        sr.color = origColor;
+        _isHurt = false;
     }
 
     protected void Death()

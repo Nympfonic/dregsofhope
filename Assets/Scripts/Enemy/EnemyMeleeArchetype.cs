@@ -6,6 +6,8 @@ using UnityEngine;
 public class EnemyMeleeArchetype : EnemyController
 {
     private Rigidbody2D rb;
+    private Animator animator;
+    private Transform hitboxPoint;
 
     private enum State
     {
@@ -24,7 +26,9 @@ public class EnemyMeleeArchetype : EnemyController
     [SerializeField][Range(2.0f, 6.0f)]
     private float speed = 4.0f;
 
-    private float attackRange = 1.4f;
+    private int attackDamage = 24;
+    private float attackRange = 1.2f;
+    private bool hitboxEnabled = false;
 
     [SerializeField][Range(.3f, 3.0f)]
     private float stunDuration = 1.0f;
@@ -35,6 +39,8 @@ public class EnemyMeleeArchetype : EnemyController
         base.Start();
 
         rb = GetComponent<Rigidbody2D>();
+        animator = GetComponent<Animator>();
+        hitboxPoint = transform.GetChild(0);
 
         sightDist = 4.0f;
         curState = State.Idle;
@@ -54,6 +60,11 @@ public class EnemyMeleeArchetype : EnemyController
 
     private void Update()
     {
+        if (isDead)
+        {
+            curState = State.Dead;
+        }
+
         switch (curState)
         {
             case State.Idle:
@@ -72,6 +83,7 @@ public class EnemyMeleeArchetype : EnemyController
                 Stunned();
                 break;
             case State.Dead:
+                Destroy(gameObject);
                 break;
         }
     }
@@ -81,7 +93,7 @@ public class EnemyMeleeArchetype : EnemyController
         Collider2D playerInRange = Physics2D.OverlapCircle(transform.position, sightDist, playerMask);
 
         if (playerInRange
-            && Vector3.Dot(CurrentDirection(), target.position) > 0)
+            && Vector2.Dot(CurrentDirection(), (target.position - transform.position).normalized) > 0)
         {
             int obstacleMask = LayerMask.GetMask("Player", "Ground");
             RaycastHit2D playerInSight = Physics2D.Linecast(transform.position + new Vector3(0, .3f),
@@ -101,6 +113,8 @@ public class EnemyMeleeArchetype : EnemyController
             {
                 Debug.Log("State: Attacking");
                 prevState = curState;
+                // Attack trigger
+                animator.SetTrigger("Attack");
                 curState = State.Attacking;
             }
             else if (!playerInSight
@@ -125,66 +139,74 @@ public class EnemyMeleeArchetype : EnemyController
 
     private void Idle()
     {
-        Detection();
+        if (!isHurt || curState != State.Stunned)
+        {
+            Detection();
+        }
     }
 
     private void Follow()
     {
-        Detection();
+        if (!isHurt || curState != State.Stunned)
+        {
+            Detection();
 
-        transform.position = Vector3.MoveTowards(transform.position,
-            new Vector3(target.position.x, transform.position.y, transform.position.z),
-            speed * Time.deltaTime);
+            transform.position = Vector3.MoveTowards(transform.position,
+                new Vector3(target.position.x, transform.position.y, transform.position.z),
+                speed * Time.deltaTime);
+        }
     }
 
     private void Attack()
     {
-        // Animation trigger for attacking
-
+        // Handle attack collision
+        if (hitboxEnabled)
+        {
+            Collider2D hitTarget = Physics2D.OverlapBox(hitboxPoint.position, new Vector2(1f, .9f), 0, playerMask);
+            if (hitTarget)
+            {
+                PlayerController pc = target.GetComponent<PlayerController>();
+                if (pc)
+                {
+                    if (!pc.isHurt)
+                    {
+                        pc.TakeDamage(attackDamage);
+                    }
+                }
+                // Attack chain moves if previous hit connects
+                //attackNum = (attackNum + 1) % 3;
+                //animator.SetInteger("AttackNum", attackNum);
+            }
+        }
         // Return to Idle state after animation finishes
     }
 
     private void Patrol()
     {
-        Detection();
+        if (!isHurt || curState != State.Stunned)
+        {
+            Detection();
 
-        if (facingRight && transform.position.x < pointB.position.x)
-        {
-            transform.position = Vector3.MoveTowards(transform.position,
-                new Vector3(pointB.position.x, transform.position.y, transform.position.z),
-                speed * Time.deltaTime);
-        }
-        else if (!facingRight && transform.position.x > pointA.position.x)
-        {
-            transform.position = Vector3.MoveTowards(transform.position,
-                new Vector3(pointA.position.x, transform.position.y, transform.position.z),
-                speed * Time.deltaTime);
-        }
-        else if (transform.position.x > pointB.position.x)
-        {
-            if (facingRight)
+            if ((facingRight && transform.position.x < pointB.position.x)
+                || transform.position.x > pointB.position.x)
+            {
+                transform.position = Vector3.MoveTowards(transform.position,
+                    new Vector3(pointB.position.x, transform.position.y, transform.position.z),
+                    speed * Time.deltaTime);
+            }
+            else if ((!facingRight && transform.position.x > pointA.position.x)
+                || transform.position.x < pointA.position.x)
+            {
+                transform.position = Vector3.MoveTowards(transform.position,
+                    new Vector3(pointA.position.x, transform.position.y, transform.position.z),
+                    speed * Time.deltaTime);
+            }
+
+            if ((!facingRight && transform.position.x <= pointA.position.x)
+                || (facingRight && transform.position.x >= pointB.position.x))
             {
                 FlipSprite();
             }
-            transform.position = Vector3.MoveTowards(transform.position,
-                new Vector3(pointB.position.x, transform.position.y, transform.position.z),
-                speed * Time.deltaTime);
-        }
-        else if (transform.position.x < pointA.position.x)
-        {
-            if (!facingRight)
-            {
-                FlipSprite();
-            }
-            transform.position = Vector3.MoveTowards(transform.position,
-                new Vector3(pointA.position.x, transform.position.y, transform.position.z),
-                speed * Time.deltaTime);
-        }
-
-        if ((!facingRight && transform.position.x == pointA.position.x)
-            || (facingRight && transform.position.x == pointB.position.x))
-        {
-            FlipSprite();
         }
     }
 
