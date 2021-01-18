@@ -278,12 +278,13 @@ public class PlayerController : Singleton
         }
     }
 
+    #region Attack Animation Event Functions
     private void StartAttackAnimation()
     {
         canAttack = false;
     }
 
-    #region Attack Animation Event Functions
+    
     private void EnableAttackHitbox()
     {
         hitboxEnabled = true;

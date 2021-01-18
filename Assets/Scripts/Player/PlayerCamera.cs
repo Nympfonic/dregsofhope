@@ -32,6 +32,9 @@ public class PlayerCamera : MonoBehaviour
     {
         camY = Mathf.Clamp(player.position.y, yMin + camOrthsize, yMax - camOrthsize);
         camX = Mathf.Clamp(player.position.x, xMin + camRatio, xMax - camRatio);
-        transform.position = new Vector3(camX, camY, transform.position.z);
+        if (player)
+        {
+            transform.position = new Vector3(camX, camY, transform.position.z);
+        }
     }
 }

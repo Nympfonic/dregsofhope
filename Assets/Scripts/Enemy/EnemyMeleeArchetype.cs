@@ -27,6 +27,9 @@ public class EnemyMeleeArchetype : EnemyController
     private float speed = 4.0f;
 
     private int attackDamage = 24;
+    private bool canAttack = true;
+    private bool hasHit = false;
+    private float attackCooldown = 1.5f;
     private float attackRange = 1.2f;
     private bool hitboxEnabled = false;
 
@@ -103,7 +106,7 @@ public class EnemyMeleeArchetype : EnemyController
                 && curState != State.Following
                 && Mathf.Abs(transform.position.x - target.position.x) > attackRange)
             {
-                Debug.Log("State: Following");
+                //Debug.Log("State: Following");
                 prevState = curState;
                 curState = State.Following;
             }
@@ -111,7 +114,7 @@ public class EnemyMeleeArchetype : EnemyController
                 && curState != State.Attacking
                 && Mathf.Abs(transform.position.x - target.position.x) <= attackRange)
             {
-                Debug.Log("State: Attacking");
+                //Debug.Log("State: Attacking");
                 prevState = curState;
                 // Attack trigger
                 animator.SetTrigger("Attack");
@@ -131,7 +134,7 @@ public class EnemyMeleeArchetype : EnemyController
         else if (willPatrol
             && curState == State.Idle)
         {
-            Debug.Log("State: Patrolling");
+            //Debug.Log("State: Patrolling");
             prevState = curState;
             curState = State.Patrolling;
         }
@@ -168,9 +171,10 @@ public class EnemyMeleeArchetype : EnemyController
                 PlayerController pc = target.GetComponent<PlayerController>();
                 if (pc)
                 {
-                    if (!pc.isHurt)
+                    if (!pc.isHurt && !hasHit)
                     {
                         pc.TakeDamage(attackDamage);
+                        StartCoroutine(DamageCooldown());
                     }
                 }
                 // Attack chain moves if previous hit connects
@@ -178,7 +182,50 @@ public class EnemyMeleeArchetype : EnemyController
                 //animator.SetInteger("AttackNum", attackNum);
             }
         }
-        // Return to Idle state after animation finishes
+    }
+
+    private bool TargetHit()
+    {
+        Collider2D col = Physics2D.OverlapBox(hitboxPoint.position, new Vector2(1f, .9f), 0, playerMask);
+
+        return col;
+    }
+
+    private IEnumerator DamageCooldown()
+    {
+        hasHit = true;
+        yield return new WaitWhile(TargetHit);
+        hasHit = false;
+    }
+
+    #region Attack Animation Event Functions
+    private void StartAttackAnimation()
+    {
+        canAttack = false;
+    }
+
+    private void EnableAttackHitbox()
+    {
+        hitboxEnabled = true;
+    }
+
+    private void DisableAttackHitbox()
+    {
+        hitboxEnabled = false;
+    }
+
+    private void FinishAttackAnimation()
+    {
+        StartCoroutine(CooldownTimer(i => { canAttack = i; }, attackCooldown));
+        curState = prevState;
+    }
+    #endregion
+
+    private IEnumerator CooldownTimer(System.Action<bool> toggleVar, float time)
+    {
+        toggleVar(false);
+        yield return new WaitForSeconds(time);
+        toggleVar(true);
     }
 
     private void Patrol()

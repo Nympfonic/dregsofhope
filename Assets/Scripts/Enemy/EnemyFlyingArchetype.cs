@@ -122,7 +122,7 @@ public class EnemyFlyingArchetype : EnemyController
                 && curState != State.Following
                 && (target.position - transform.position).sqrMagnitude > Mathf.Pow(attackRange, 2))
             {
-                Debug.Log("State: Following");
+                //Debug.Log("State: Following");
                 prevState = curState;
                 curState = State.Following;
             }
@@ -131,7 +131,7 @@ public class EnemyFlyingArchetype : EnemyController
                 && canAttack
                 && Vector2.SqrMagnitude(target.position - transform.position) <= Mathf.Pow(attackRange, 2))
             {
-                Debug.Log("State: Attacking");
+                //Debug.Log("State: Attacking");
                 prevState = curState;
                 lastTargetLocation = playerInRange.transform.position;
                 curState = State.Attacking;
@@ -150,7 +150,7 @@ public class EnemyFlyingArchetype : EnemyController
         else if (willPatrol
             && curState == State.Idle)
         {
-            Debug.Log("State: Patrolling");
+            //Debug.Log("State: Patrolling");
             prevState = curState;
             curState = State.Patrolling;
         }
