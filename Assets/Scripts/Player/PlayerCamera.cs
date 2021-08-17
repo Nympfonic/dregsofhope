@@ -5,10 +5,10 @@ using UnityEngine.U2D;
 
 public class PlayerCamera : MonoBehaviour
 {
-    public BoxCollider2D mapBounds;
-
+    private BoxCollider2D mapBounds;
     private Transform player;
     private Camera cam;
+
     private float camOrthsize;
     private float camRatio;
     private float xMin, xMax, yMin, yMax;
@@ -16,6 +16,7 @@ public class PlayerCamera : MonoBehaviour
 
     private void Start()
     {
+        mapBounds = GameObject.Find("MapBounds").GetComponent<BoxCollider2D>();
         player = GameObject.Find("Player").transform;
 
         xMin = mapBounds.bounds.min.x;
@@ -30,10 +31,11 @@ public class PlayerCamera : MonoBehaviour
 
     private void LateUpdate()
     {
-        camY = Mathf.Clamp(player.position.y, yMin + camOrthsize, yMax - camOrthsize);
-        camX = Mathf.Clamp(player.position.x, xMin + camRatio, xMax - camRatio);
         if (player)
         {
+            camY = Mathf.Clamp(player.position.y, yMin + camOrthsize, yMax - camOrthsize);
+            camX = Mathf.Clamp(player.position.x, xMin + camRatio, xMax - camRatio);
+
             transform.position = new Vector3(camX, camY, transform.position.z);
         }
     }

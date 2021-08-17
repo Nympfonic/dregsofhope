@@ -1,12 +1,11 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using AlanZucconi.AI.BT;
 
-[RequireComponent(typeof(Rigidbody2D))]
-public class EnemyMeleeArchetype : EnemyController
+[RequireComponent(typeof(Rigidbody2D), typeof(BoxCollider2D), typeof(Animator))]
+public class EnemyMeleeArchetype : EnemyArchetype
 {
-    private Rigidbody2D rb;
-    private Animator animator;
     private Transform hitboxPoint;
 
     private enum State
@@ -15,39 +14,37 @@ public class EnemyMeleeArchetype : EnemyController
         Patrolling,
         Following,
         Attacking,
+        Hurt,
         Stunned,
         Dead
     }
     private State curState, prevState;
     private Transform pointA, pointB;
 
-    [SerializeField]
-    private bool willPatrol = false;
-    [SerializeField][Range(2.0f, 6.0f)]
-    private float speed = 4.0f;
+    [SerializeField] private bool willPatrol = false;
+    [SerializeField][Range(0.1f, 5.0f)] private float speed = 1.0f;
 
     private int attackDamage = 24;
     private bool canAttack = true;
     private bool hasHit = false;
     private float attackCooldown = 1.5f;
-    private float attackRange = 1.2f;
-    private bool hitboxEnabled = false;
+    [SerializeField] private float attackRange = 1.2f;
+    [SerializeField] private float knockbackForce = 4f;
 
-    [SerializeField][Range(.3f, 3.0f)]
-    private float stunDuration = 1.0f;
+    [SerializeField][Range(.3f, 3.0f)] private float stunDuration = 1.0f;
     private float stunTimer = 0;
 
     protected override void Start()
     {
         base.Start();
 
-        rb = GetComponent<Rigidbody2D>();
-        animator = GetComponent<Animator>();
-        hitboxPoint = transform.GetChild(0);
+        
+        //hitboxPoint = transform.GetChild(0);
 
         sightDist = 4.0f;
         curState = State.Idle;
 
+        // If a patrolling enemy, prepare patrol points
         if (willPatrol)
         {
             pointA = transform.parent.Find("PointA");
@@ -59,168 +56,240 @@ public class EnemyMeleeArchetype : EnemyController
                 Debug.Log("Cannot patrol without 2 points");
             }
         }
+        // Else if a stationary enemy, save current position as fallback
+        else
+        {
+
+        }
     }
 
-    private void Update()
+    protected override Node CreateBehaviourTree()
+    {
+        return Action.Nothing;
+    }
+
+    protected virtual void Update()
     {
         if (isDead)
         {
             curState = State.Dead;
         }
-
-        switch (curState)
+        else
         {
-            case State.Idle:
-                Idle();
-                break;
-            case State.Following:
-                Follow();
-                break;
-            case State.Attacking:
-                Attack();
-                break;
-            case State.Patrolling:
-                Patrol();
-                break;
-            case State.Stunned:
-                Stunned();
-                break;
-            case State.Dead:
-                Destroy(gameObject);
-                break;
+            switch (curState)
+            {
+                case State.Idle:
+                    IdleState();
+                    break;
+                case State.Following:
+                    FollowState();
+                    break;
+                case State.Attacking:
+                    AttackState();
+                    break;
+                case State.Patrolling:
+                    PatrolState();
+                    break;
+                case State.Hurt:
+                    HurtState();
+                    break;
+                case State.Stunned:
+                    StunnedState();
+                    break;
+                case State.Dead:
+                    Death();
+                    break;
+            }
         }
     }
 
+    /// <summary>
+    /// Handles the detection of the player and changing states.
+    /// </summary>
     private void Detection()
     {
         Collider2D playerInRange = Physics2D.OverlapCircle(transform.position, sightDist, playerMask);
 
+        // If player in range, and in the direction the entity is facing
         if (playerInRange
+            && !pc.isDead
             && Vector2.Dot(CurrentDirection(), (target.position - transform.position).normalized) > 0)
         {
             int obstacleMask = LayerMask.GetMask("Player", "Ground");
             RaycastHit2D playerInSight = Physics2D.Linecast(transform.position + new Vector3(0, .3f),
                 target.position, obstacleMask);
 
+            // If player in sight, but outside attack range, move towards the player
             if (playerInSight.collider.CompareTag("Player")
                 && curState != State.Following
                 && Mathf.Abs(transform.position.x - target.position.x) > attackRange)
             {
-                //Debug.Log("State: Following");
-                prevState = curState;
+                Debug.Log(gameObject.name + " State: Out of attack range; Following");
+                animator.SetBool("IsMoving", true);
                 curState = State.Following;
             }
+            // Else if the player in sight, but within attack range, attack the player
             else if (playerInSight.collider.CompareTag("Player")
                 && curState != State.Attacking
                 && Mathf.Abs(transform.position.x - target.position.x) <= attackRange)
             {
-                //Debug.Log("State: Attacking");
-                prevState = curState;
-                // Attack trigger
+                Debug.Log(gameObject.name + " State: In attack range; Attacking");
+                animator.SetBool("IsMoving", false);
                 animator.SetTrigger("Attack");
                 curState = State.Attacking;
             }
+            // Else if player not in sight, return to idle state
             else if (!playerInSight
                 && curState == State.Following)
             {
+                Debug.Log(gameObject.name + " State: No player in LoS; Idling");
+                animator.SetBool("IsMoving", false);
                 curState = State.Idle;
             }
         }
+        // Else if player not in range, return to idle state
         else if (!playerInRange
-            && curState == State.Following)
+            && curState != State.Idle)
         {
+            Debug.Log(gameObject.name + " State: No player in range; Idling");
+            animator.SetBool("IsMoving", false);
             curState = State.Idle;
         }
+        // Else if entity will patrol, and currently in idle state, return to patrolling state
         else if (willPatrol
             && curState == State.Idle)
         {
-            //Debug.Log("State: Patrolling");
-            prevState = curState;
+            Debug.Log(gameObject.name + " State: No player in range; Patrolling");
+            animator.SetBool("IsMoving", true);
             curState = State.Patrolling;
         }
     }
 
-    private void Idle()
+    /// <summary>
+    /// Handles the Idle state.
+    /// </summary>
+    private void IdleState()
     {
-        if (!isHurt || curState != State.Stunned)
+        if (!_isHurt || curState != State.Stunned)
         {
             Detection();
         }
     }
 
-    private void Follow()
+    /// <summary>
+    /// Handles the Follow state.
+    /// </summary>
+    private void FollowState()
     {
-        if (!isHurt || curState != State.Stunned)
+        if (!_isHurt || curState != State.Stunned)
         {
             Detection();
-
-            transform.position = Vector3.MoveTowards(transform.position,
-                new Vector3(target.position.x, transform.position.y, transform.position.z),
-                speed * Time.deltaTime);
-        }
-    }
-
-    private void Attack()
-    {
-        // Handle attack collision
-        if (hitboxEnabled)
-        {
-            Collider2D hitTarget = Physics2D.OverlapBox(hitboxPoint.position, new Vector2(1f, .9f), 0, playerMask);
-            if (hitTarget)
+            if ((facingRight && transform.position.x > target.position.x)
+                || (!facingRight && transform.position.x < target.position.x))
             {
-                PlayerController pc = target.GetComponent<PlayerController>();
-                if (pc)
-                {
-                    if (!pc.isHurt && !hasHit)
-                    {
-                        pc.TakeDamage(attackDamage);
-                        StartCoroutine(DamageCooldown());
-                    }
-                }
-                // Attack chain moves if previous hit connects
-                //attackNum = (attackNum + 1) % 3;
-                //animator.SetInteger("AttackNum", attackNum);
+                FlipSprite();
             }
+            /*transform.position = Vector3.MoveTowards(transform.position,
+                new Vector3(target.position.x, transform.position.y, transform.position.z),
+                speed * Time.deltaTime);*/
+            //rb.AddForce(speed * Vector2.right * (target.position - transform.position).normalized);
+            rb.velocity = new Vector2(speed * (target.position - transform.position).normalized.x, 0);
+        }
+    }
+
+    /// <summary>
+    /// Handles the Attack state.
+    /// </summary>
+    private void AttackState()
+    {
+        //Collider2D hitTarget = Physics2D.OverlapBox(transform.position + (Vector3)hitbox.offset, hitbox.size, 0, playerMask);
+        if (TargetHit() && !hasHit)
+        {
+            //hasHit = true;
+            if (!pc.isHurt && !pc.isDead)
+            {
+                pc.TakeDamage(attackDamage, (target.transform.position - transform.position).normalized, knockbackForce);
+                StartCoroutine(AttackDamageCooldown());
+            }
+            // Attack chain moves if previous hit connects
+            //attackNum = (attackNum + 1) % 3;
+            //animator.SetInteger("AttackNum", attackNum);
         }
     }
 
     private bool TargetHit()
     {
-        Collider2D col = Physics2D.OverlapBox(hitboxPoint.position, new Vector2(1f, .9f), 0, playerMask);
-
+        Collider2D col = Physics2D.OverlapBox(transform.position + (Vector3)hitbox.offset, hitbox.size, 0, playerMask);
         return col;
     }
 
-    private IEnumerator DamageCooldown()
+    // Needs to be merged with the Cooldown timer utility method
+    private IEnumerator AttackDamageCooldown()
     {
         hasHit = true;
-        yield return new WaitWhile(TargetHit);
+        yield return new UnityEngine.WaitUntil(() => !TargetHit() && !target.GetComponent<PlayerController>().isHurt);
         hasHit = false;
     }
 
     #region Attack Animation Event Functions
+
+    /// <summary>
+    /// This should be called when the Attack animation begins.
+    /// </summary>
     private void StartAttackAnimation()
     {
         canAttack = false;
     }
 
-    private void EnableAttackHitbox()
-    {
-        hitboxEnabled = true;
-    }
-
-    private void DisableAttackHitbox()
-    {
-        hitboxEnabled = false;
-    }
-
+    /// <summary>
+    /// This should be called when the Attack animation ends.
+    /// </summary>
     private void FinishAttackAnimation()
     {
         StartCoroutine(CooldownTimer(i => { canAttack = i; }, attackCooldown));
-        curState = prevState;
+        curState = State.Idle;
     }
+
     #endregion
 
+    /// <summary>
+    /// Handles the Hurt state.
+    /// </summary>
+    private void HurtState()
+    {
+        animator.SetBool("IsMoving", false);
+    }
+
+    #region Hurt Animation Event Functions
+
+    /// <summary>
+    /// Should be called when the Hurt animation begins.
+    /// </summary>
+    protected override void StartHurtAnimation()
+    {
+        base.StartHurtAnimation();
+
+        curState = State.Hurt;
+    }
+
+    /// <summary>
+    /// Should be called when the Hurt animation ends.
+    /// </summary>
+    protected override void FinishHurtAnimation()
+    {
+        base.FinishHurtAnimation();
+
+        curState = State.Idle;
+    }
+
+    #endregion
+
+    /// <summary>
+    /// Utility method for managing cooldowns.
+    /// </summary>
+    /// <param name="toggleVar">The boolean to be toggled.</param>
+    /// <param name="time">The time to wait before toggling the boolean back.</param>
+    /// <returns></returns>
     private IEnumerator CooldownTimer(System.Action<bool> toggleVar, float time)
     {
         toggleVar(false);
@@ -228,9 +297,12 @@ public class EnemyMeleeArchetype : EnemyController
         toggleVar(true);
     }
 
-    private void Patrol()
+    /// <summary>
+    /// Handles the Patrol state.
+    /// </summary>
+    private void PatrolState()
     {
-        if (!isHurt || curState != State.Stunned)
+        if (!_isHurt || curState != State.Stunned)
         {
             Detection();
 
@@ -257,7 +329,10 @@ public class EnemyMeleeArchetype : EnemyController
         }
     }
 
-    private void Stunned()
+    /// <summary>
+    /// Handles the Stunned state.
+    /// </summary>
+    private void StunnedState()
     {
         stunTimer += Time.deltaTime;
 

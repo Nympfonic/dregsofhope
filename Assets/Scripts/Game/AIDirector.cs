@@ -1,24 +1,31 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using AlanZucconi.AI.BT;
 
 public class AIDirector : Singleton
 {
     private BehaviourTree tree;
 
-    public delegate void OnEnterArea();
-    public static event OnEnterArea onEnterArea;
+    public delegate void EnterArea();
+    public static event EnterArea OnEnterArea;
+
+    EventZone[] eventZones;
 
     public AnimationCurve eventUtility;
-    [SerializeField]
-    private float eventTimeThreshold = 10.0f;
-    [SerializeField]
-    private float eventTimeMaxThreshold = 25.0f;
+    [SerializeField] private float eventTimeThreshold = 5.0f;
+    [SerializeField] private float eventTimeMaxThreshold = 25.0f;
     private float lastEventTime = 0;
     private bool eventUtilityRunning = false;
-    [HideInInspector]
-    public int challengeDesire = 0;
+    private bool eventTimerActive = true;
+    private bool waitingForEvent = false;
+    public static bool HasEventBeenFired = false;
+    private static int _challengeDesire = 0;
+    public static int ChallengeDesire
+    {
+        get { return _challengeDesire; }
+    }
 
     private void Start()
     {
@@ -28,16 +35,38 @@ public class AIDirector : Singleton
 
     private void Update()
     {
-        lastEventTime += Time.deltaTime;
+        SceneManager.sceneLoaded += OnSceneLoad;
+
+        if (eventTimerActive)
+        {
+            lastEventTime += Time.deltaTime;
+        }
 
         tree.Update();
     }
 
-    private void SubscribeEvents()
+    public static void WaitingForEvent()
     {
 
     }
 
+    /// <summary>
+    /// When a new scene loads, find the scene's event zones, and store in a list.
+    /// </summary>
+    private void OnSceneLoad(Scene scene, LoadSceneMode mode)
+    {
+        eventZones = FindObjectsOfType<EventZone>();
+    }
+
+    /// <summary>
+    /// Utility method to map a value from an old range to a new range of values.
+    /// </summary>
+    /// <param name="oVal">The value to be mapped.</param>
+    /// <param name="oMin">The old range minimum value.</param>
+    /// <param name="oMax">The old range maximum value.</param>
+    /// <param name="nMin">The new range minimum value.</param>
+    /// <param name="nMax">The new range maximum value.</param>
+    /// <returns></returns>
     private float Map(float oVal, float oMin, float oMax, float nMin, float nMax)
     {
         float oRange = oMax - oMin;
@@ -47,44 +76,80 @@ public class AIDirector : Singleton
         return value;
     }
 
+    /// <summary>
+    /// Evaluates the event probability curve.
+    /// </summary>
     private float EventUtility()
     {
         return eventUtility.Evaluate(Mathf.Clamp01(lastEventTime / eventTimeMaxThreshold));
     }
 
-    private float ChallengeDesire()
+    /// <summary>
+    /// Normalises the challenge value.
+    /// </summary>
+    private float ChallengeDesireNormalized()
     {
-        float desireNormalized = Map(challengeDesire, -50, 50, 0, 1);
+        float desireNormalized = Map(_challengeDesire, -50, 50, 1, 0);
 
         return desireNormalized;
     }
 
+    /// <summary>
+    /// Checks if event is ready to be triggered.
+    /// </summary>
     private IEnumerator EventUtilityCheck()
     {
         eventUtilityRunning = true;
-        if (EventUtility() <= ChallengeDesire())
+        if (lastEventTime >= eventTimeMaxThreshold)
         {
-            // Subscribe to event
+            Debug.Log("Event waiting to be triggered");
+            // if player enters any event trigger zone,
+            // subscribe to begin event
+            waitingForEvent = true;
+            //eventTimerActive = false;
+            //lastEventTime = 0;
+        }
+        else if (EventUtility() >= ChallengeDesireNormalized()) {
+            if ()
         }
         yield return new WaitForSeconds(5.0f);
         eventUtilityRunning = false;
     }
 
-    public Node CreateBehaviourTree()
+    /// <summary>
+    /// Creates the behaviour tree.
+    /// </summary>
+    private Node CreateBehaviourTree()
     {
         return new Selector
         (
             new Filter
             (
                 // Check time passed since last event
-                () => lastEventTime >= eventTimeThreshold && !eventUtilityRunning,
-                // if greater than 10 secs (prototype demonstration)
+                () => lastEventTime >= eventTimeThreshold
+                    && !eventUtilityRunning
+                    && !waitingForEvent
+                    && !HasEventBeenFired,
+                // if greater than the threshold
                 // then choose an event to carry out using utility function
                 new Action
                 (
                     () => {
                         StartCoroutine(EventUtilityCheck());
                     }
+                )
+            ),
+            new Filter
+            (
+                () => waitingForEvent && !HasEventBeenFired,
+                new Selector
+                (
+                    new Filter
+                    (
+                        () => ,
+                        new Action(() => { })
+                    ),
+                    new Action( () => {} )
                 )
             )
         );

@@ -4,21 +4,15 @@ using UnityEngine;
 
 public class PitfallDeath : MonoBehaviour
 {
-    // Start is called before the first frame update
-    void Start()
-    {
-        
-    }
-
     private void OnTriggerEnter2D(Collider2D collision)
     {
         if (collision.CompareTag("Player"))
         {
-            Destroy(collision.gameObject);
+            collision.GetComponent<PlayerController>().TakeDamage(9999);
         }
-        else if (collision.CompareTag("Enemy"))
+        if (collision.CompareTag("Enemy"))
         {
-            Destroy(collision.gameObject);
+            collision.GetComponent<EnemyArchetype>().TakeDamage(9999);
         }
     }
 }

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody2D))]
-public class EnemyFlyingArchetype : EnemyController
+public class EnemyFlyingArchetype : EnemyArchetype
 {
     private Rigidbody2D rb;
 
@@ -158,7 +158,7 @@ public class EnemyFlyingArchetype : EnemyController
 
     private void Idle()
     {
-        if (!isHurt || curState != State.Stunned)
+        if (!_isHurt || curState != State.Stunned)
         {
             Detection();
         }
@@ -166,7 +166,7 @@ public class EnemyFlyingArchetype : EnemyController
 
     private void Follow()
     {
-        if (!isHurt || curState != State.Stunned)
+        if (!_isHurt || curState != State.Stunned)
         {
             Detection();
 
@@ -212,7 +212,7 @@ public class EnemyFlyingArchetype : EnemyController
 
     private void Patrol()
     {
-        if (!isHurt || curState != State.Stunned)
+        if (!_isHurt || curState != State.Stunned)
         {
             Detection();
 

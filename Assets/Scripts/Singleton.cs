@@ -16,6 +16,7 @@ public class Singleton : MonoBehaviour
     {
         if (_instance && _instance != this)
         {
+            Debug.Log("Destroy copy");
             Destroy(gameObject);
             return;
         }
