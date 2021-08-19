@@ -1,42 +1,33 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.U2D;
+using Cinemachine;
 
 public class PlayerCamera : MonoBehaviour
 {
-    private BoxCollider2D mapBounds;
-    private Transform player;
-    private Camera cam;
-
-    private float camOrthsize;
-    private float camRatio;
-    private float xMin, xMax, yMin, yMax;
-    private float camX, camY;
+    private CinemachineFramingTransposer vcamFT;
+    private float minY = .3f;
+    private float maxY = .52f;
 
     private void Start()
     {
-        mapBounds = GameObject.Find("MapBounds").GetComponent<BoxCollider2D>();
-        player = GameObject.Find("Player").transform;
-
-        xMin = mapBounds.bounds.min.x;
-        xMax = mapBounds.bounds.max.x;
-        yMin = mapBounds.bounds.min.y;
-        yMax = mapBounds.bounds.max.y;
-
-        cam = GetComponent<Camera>();
-        camOrthsize = cam.orthographicSize;
-        camRatio = cam.aspect * camOrthsize;
+        vcamFT = FindObjectOfType<CinemachineVirtualCamera>().GetCinemachineComponent<CinemachineFramingTransposer>();
     }
 
     private void LateUpdate()
     {
-        if (player)
+        if (DownInput())
         {
-            camY = Mathf.Clamp(player.position.y, yMin + camOrthsize, yMax - camOrthsize);
-            camX = Mathf.Clamp(player.position.x, xMin + camRatio, xMax - camRatio);
-
-            transform.position = new Vector3(camX, camY, transform.position.z);
+            vcamFT.m_ScreenY = Mathf.Clamp(vcamFT.m_ScreenY - .005f, minY, maxY);
         }
+        else
+        {
+            vcamFT.m_ScreenY = Mathf.Clamp(vcamFT.m_ScreenY + .005f, minY, maxY);
+        }
+    }
+
+    private bool DownInput()
+    {
+        return Input.GetButton("Down");
     }
 }

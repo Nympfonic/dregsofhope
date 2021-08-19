@@ -5,6 +5,13 @@ using UnityEngine;
 [RequireComponent(typeof(BoxCollider2D))]
 public class Interactable : MonoBehaviour
 {
+    private GameObject _interactionHint;
+
+    private void Start()
+    {
+        _interactionHint = transform.GetChild(0).gameObject;
+    }
+
     public enum InteractionType
     {
         NONE,
@@ -33,6 +40,24 @@ public class Interactable : MonoBehaviour
             default:
                 Debug.LogError("Not a valid interactable");
                 break;
+        }
+    }
+
+    public void ShowInteractionHint()
+    {
+        _interactionHint.SetActive(true);
+    }
+
+    public void HideInteractionHint()
+    {
+        _interactionHint.SetActive(false);
+    }
+
+    private void OnTriggerExit2D(Collider2D collision)
+    {
+        if (collision.CompareTag("Player"))
+        {
+            HideInteractionHint();
         }
     }
 

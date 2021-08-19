@@ -4,8 +4,11 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using AlanZucconi.AI.BT;
 
-public class AIDirector : Singleton
+public class AIDirector : MonoBehaviour
 {
+    private static AIDirector _instance;
+    public static AIDirector Instance { get { return _instance; } }
+
     private BehaviourTree tree;
 
     public delegate void EnterArea();
@@ -22,9 +25,11 @@ public class AIDirector : Singleton
     private bool waitingForEvent = false;
     public static bool HasEventBeenFired = false;
     private static int _challengeDesire = 0;
-    public static int ChallengeDesire
+    public static int ChallengeDesire { get { return _challengeDesire; } }
+
+    private void Awake()
     {
-        get { return _challengeDesire; }
+        _instance = this;
     }
 
     private void Start()
@@ -43,11 +48,6 @@ public class AIDirector : Singleton
         }
 
         tree.Update();
-    }
-
-    public static void WaitingForEvent()
-    {
-
     }
 
     /// <summary>
@@ -110,7 +110,7 @@ public class AIDirector : Singleton
             //lastEventTime = 0;
         }
         else if (EventUtility() >= ChallengeDesireNormalized()) {
-            if ()
+            
         }
         yield return new WaitForSeconds(5.0f);
         eventUtilityRunning = false;
@@ -146,12 +146,27 @@ public class AIDirector : Singleton
                 (
                     new Filter
                     (
-                        () => ,
-                        new Action(() => { })
+                        () => Random.Range(0, 100) < 70,
+                        new Action(() => AmbushEvent())
                     ),
-                    new Action( () => {} )
+                    new Action(() => PursuerEvent())
                 )
             )
         );
+    }
+
+    public void EventActive()
+    {
+
+    }
+
+    private void AmbushEvent()
+    {
+
+    }
+
+    private void PursuerEvent()
+    {
+
     }
 }

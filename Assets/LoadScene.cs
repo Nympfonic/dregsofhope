@@ -15,7 +15,7 @@ public class LoadScene : MonoBehaviour
     private void OnTriggerEnter2D(Collider2D collision)
     {
         if (collision.CompareTag("Player")) {
-            GameManager.SavedSpawnLocation = playerSpawnLocation;
+            GameManager.SavedSpawnLocation = playerSpawnLocation.transform.position;
             GameManager.PreviousScene = SceneManager.GetActiveScene().buildIndex;
             GameManager.CurrentPlayerHealth = collision.GetComponent<PlayerController>().CurrentHealth;
             GameManager.MaxPlayerHealth = collision.GetComponent<PlayerController>().MaxHealth;

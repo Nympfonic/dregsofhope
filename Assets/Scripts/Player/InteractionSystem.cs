@@ -5,7 +5,7 @@ using UnityEngine;
 public class InteractionSystem : MonoBehaviour
 {
     private const float detectionRadius = .7f;
-    private LayerMask detectionLayer = 11;
+    [SerializeField] private LayerMask detectionLayer;
     // Cache detected object
     private GameObject detectedInteractable;
 
@@ -28,15 +28,16 @@ public class InteractionSystem : MonoBehaviour
     private bool DetectInteractable()
     {
         Collider2D obj = Physics2D.OverlapCircle(transform.position, detectionRadius, detectionLayer);
-        if (obj == null)
+        if (obj)
         {
-            detectedInteractable = null;
-            return false;
+            detectedInteractable = obj.gameObject;
+            obj.GetComponent<Interactable>().ShowInteractionHint();
+            return true;
         }
         else
         {
-            detectedInteractable = obj.gameObject;
-            return true;
+            detectedInteractable = null;
+            return false;
         }
     }
 

@@ -41,8 +41,8 @@ public class EnemySkeleton : EnemyArchetype
         // If a patrolling AI, prepare patrol points
         if (willPatrol)
         {
-            pointA = transform.parent.Find("PointA");
-            pointB = transform.parent.Find("PointB");
+            pointA = transform.parent.Find("Point A");
+            pointB = transform.parent.Find("Point B");
 
             if (!pointA || !pointB)
             {
@@ -100,14 +100,14 @@ public class EnemySkeleton : EnemyArchetype
                                     // If player in attack radius
                                     new Filter
                                     (
-                                        () => PlayerInSight() && PlayerAlreadySpotted() && PlayerInAttackRadius() && !_isAttacking,
+                                        () => PlayerInSight() && PlayerAlreadySpotted() && PlayerInAttackRange() && PlayerInAttackRadius() && !_isAttacking,
                                         // AI will attack player
                                         new Action(() => Attack())
                                     ),
                                     // If player in line of sight, but not attack radius
                                     new Filter
                                     (
-                                        () => PlayerInSight() && PlayerAlreadySpotted() && !PlayerInAttackRadius() && !_isAttacking,
+                                        () => PlayerInSight() && PlayerAlreadySpotted() && !PlayerInAttackRange() && !PlayerInAttackRadius() && !_isAttacking,
                                         // AI will follow player
                                         new Action(() => Follow())
                                     ),
@@ -138,7 +138,6 @@ public class EnemySkeleton : EnemyArchetype
                                 )
 
                             ),
-                            // Else AI will idle
                             new Action(() => Idle())
                         )
                     ),
@@ -176,11 +175,23 @@ public class EnemySkeleton : EnemyArchetype
     }
 
     /// <summary>
+    /// Checks if the player is in attack range.
+    /// </summary>
+    /// <returns></returns>
+    private bool PlayerInAttackRange()
+    {
+        if (Mathf.Abs(transform.position.x - target.position.x) > attackRange)
+            return false;
+        else
+            return true;
+    }
+
+    /// <summary>
     /// Checks if the player is in attack radius.
     /// </summary>
     private bool PlayerInAttackRadius()
     {
-        if (Mathf.Abs(transform.position.x - target.position.x) > attackRange)
+        if ((target.position - transform.position).magnitude > attackRange)
             return false;
         else
             return true;

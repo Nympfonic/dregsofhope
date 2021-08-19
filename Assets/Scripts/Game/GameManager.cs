@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime;
@@ -10,10 +9,7 @@ using UnityEngine.SceneManagement;
 public class GameManager : MonoBehaviour
 {
     private static GameManager _instance;
-    public static GameManager Instance
-    {
-        get { return _instance; }
-    }
+    public static GameManager Instance { get { return _instance; } }
 
     public GameObject pauseMenu;
     private PlayerController pc;
@@ -31,18 +27,18 @@ public class GameManager : MonoBehaviour
     }
 
     // last interacted checkpoint
-    private static PlayerSpawnLocation _savedSpawnLocation;
-    public static PlayerSpawnLocation SavedSpawnLocation
+    private static SerializableVector3 _savedSpawnLocation;
+    public static Vector3 SavedSpawnLocation
     {
-        get { return _savedSpawnLocation; } 
+        get { return (Vector3)_savedSpawnLocation; } 
         set { _savedSpawnLocation = SavedSpawnLocation; }
     }
 
     // last safe death position
-    private static Vector3 _savedDeathLocation;
+    private static SerializableVector3 _savedDeathLocation;
     public static Vector3 SavedDeathLocation
     {
-        get { return _savedDeathLocation; }
+        get { return (Vector3)_savedDeathLocation; }
         set { _savedDeathLocation = SavedDeathLocation; }
     }
 
@@ -115,21 +111,29 @@ public class GameManager : MonoBehaviour
          * set player to spawn at the last interacted checkpoint */
         else if (_hasReachedFirstCheckpoint)
         {
-            pc.transform.position = (Vector2)_savedSpawnLocation.transform.position;
+            pc.transform.position = (Vector3)_savedSpawnLocation;
         }
+
+        
     }
 
     private void Update()
     {
-        if (PauseGameInput())
+        _curPlayerHealth = FindObjectOfType<PlayerController>().CurrentHealth;
+        _maxPlayerHealth = FindObjectOfType<PlayerController>().MaxHealth;
+
+        if (CurrentPlayerHealth > 0)
         {
-            if (gamePaused)
+            if (PauseGameInput())
             {
-                ResumeGame();
-            }
-            else
-            {
-                PauseGame();
+                if (gamePaused)
+                {
+                    ResumeGame();
+                }
+                else
+                {
+                    PauseGame();
+                }
             }
         }
     }
@@ -213,7 +217,7 @@ public class GameManager : MonoBehaviour
 
             // Reset to fresh state
             _savedScene = 1;
-            _savedSpawnLocation = null;
+            _savedSpawnLocation = Vector3.zero;
             _savedDeathLocation = Vector3.zero;
             _hasReachedFirstCheckpoint = false;
             Debug.Log("Save data reset complete");
@@ -225,11 +229,11 @@ public class GameManager : MonoBehaviour
     }
 }
 
-[Serializable]
+[System.Serializable]
 class SaveData
 {
     public int savedScene;
-    public PlayerSpawnLocation savedSpawnLocation;
-    public Vector3 savedDeathLocation;
+    public SerializableVector3 savedSpawnLocation;
+    public SerializableVector3 savedDeathLocation;
     public bool hasReachedFirstCheckpoint;
 }

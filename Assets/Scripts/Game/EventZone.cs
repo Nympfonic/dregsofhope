@@ -19,7 +19,7 @@ public class EventZone : MonoBehaviour
         // If player enters event zone
         if (collision.CompareTag("Player"))
         {
-            AIDirector.OnEnterArea += AIDirector.WaitingForEvent;
+            AIDirector.OnEnterArea += AIDirector.Instance.EventActive;
         }
     }
 }
